@@ -127,6 +127,34 @@ public class HuffProcessor {
 		return freq;
 	}
 
+
+	
+	public void decompress(BitInputStream in, BitOutputStream out) {
+		//check for HUFF_NUMBER
+		if(in.readBits(BITS_PER_INT) != HUFF_TREE)
+			throw new HuffException("HUFF_NUMBER is not presented!");
+		//recreate the Hufftree from header
+		HuffNode root = readTreeHeader(in);
+		// parse body of compressed file
+		HuffNode current = root;
+		while(true){
+			int bit = in.readBits(1);
+			if(bit == -1)
+				break;
+			if(bit == 1)
+				current = current.myRight;
+			else 
+				current = current.myLeft;
+			if(current.myLeft == null && current.myRight == null){
+				if(current.myValue == PSEUDO_EOF)
+					return;
+				else { 
+					out.writeBits(BITS_PER_WORD, current.myValue);
+				    current = root;
+				    }
+			}
+		}	
+	}
 	public HuffNode readTreeHeader(BitInputStream in) {
 		int bits = in.readBits(BITS_PER_INT);
 		if(bits ==-1 ) {
@@ -143,7 +171,10 @@ public class HuffProcessor {
 		}
 	}
 	
-	public void readCompressedBits(HuffNode root, BitInputStream in, BitOutputStream out){
+}
+	
+
+/*	public void readCompressedBits(HuffNode root, BitInputStream in, BitOutputStream out){
 		 HuffNode current = root; 
 		   while (true) {
 		       int bits = in.readBits(1);
@@ -167,7 +198,7 @@ public class HuffProcessor {
 
 		
 	}
-	
+	*/
 	
 	/**
 	 * Decompresses a file. Output file must be identical bit-by-bit to the
@@ -178,7 +209,7 @@ public class HuffProcessor {
 	 * @param out
 	 *            Buffered bit stream writing to the output file.
 	 */
-	public void decompress(BitInputStream in, BitOutputStream out){
+/*	public void decompress(BitInputStream in, BitOutputStream out){
 		
 		if(in.readBits(BITS_PER_INT)!= HUFF_TREE ) {
 			throw new HuffException("illegal header starts with" + in.readBits(BITS_PER_INT));
@@ -188,4 +219,4 @@ public class HuffProcessor {
 		readCompressedBits(root, in, out);
 		out.close();
 	}
-}
+}*/
