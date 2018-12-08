@@ -145,7 +145,7 @@ public class HuffProcessor {
 				current = current.myRight;
 			else 
 				current = current.myLeft;
-			if(current.myLeft == null && current.myRight == null){
+			if(current != null && current.myLeft == null && current.myRight == null){
 				if(current.myValue == PSEUDO_EOF)
 					return;
 				else { 
@@ -153,8 +153,12 @@ public class HuffProcessor {
 				    current = root;
 				    }
 			}
-		}	
+		}
+		out.close();
 	}
+	
+	
+	
 	public HuffNode readTreeHeader(BitInputStream in) {
 		int bits = in.readBits(BITS_PER_INT);
 		if(bits ==-1 ) {
