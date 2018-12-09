@@ -58,17 +58,29 @@ public class HuffProcessor {
 	
 	
 	private void writeCompressedBits(String[] codings, BitInputStream in, BitOutputStream out) {
-		while(true){
-			int character = in.readBits(BITS_PER_WORD);
-			if(character == -1)
-				break;
-			String code = codings[character];
-			out.writeBits(code.length(), Integer.parseInt(code, 2));
+		int bits = 1;
+		while (bits >= 0) { 
+			bits = in.readBits(BITS_PER_WORD);
+			if (bits == -1) {
+				writeStringToBits(codings, out, ALPH_SIZE);
+				return;
+			}
+			writeStringToBits(codings, out, bits);
+			
 		}
-		String code = codings[PSEUDO_EOF];
-		out.writeBits(code.length(), Integer.parseInt(code, 2));
 	}
-
+	
+	
+	private void writeStringToBits(String[] encodings, BitOutputStream out, int bits) {
+		String code = encodings[bits];
+		for (int i = 0; i < code.length(); i++) {
+			String s = code.substring(i, i+1);
+			int k = Integer.parseInt(s);
+			out.writeBits(1, k);
+		}
+		return;
+	}
+		
 
 	private void writeHeader(HuffNode root, BitOutputStream out){
 		if (root ==null) return;
@@ -90,13 +102,13 @@ public class HuffProcessor {
 
 	private void codingHelper(HuffNode root, String path, String[] codes) {
 		if(root == null) return;
-		if (root.myLeft == null && root.myRight == null) {
+		if (root.myValue != -1) {
 			codes[root.myValue] = path;
 			return;
 		}
 		codingHelper(root.myLeft,"0",codes);
 		codingHelper(root.myRight,"1",codes);
-		
+		return;
 		
 	}
 
