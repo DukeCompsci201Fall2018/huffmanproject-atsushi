@@ -42,62 +42,44 @@ public class HuffProcessor {
 	 *            Buffered bit stream writing to the output file.
 	 */
 	public void compress(BitInputStream in, BitOutputStream out){
-	    int[] counts = readForCounts(in);
-	    HuffNode root = makeTreeFromCounts(counts);
-	    
-	    String[] codings = makeCodingsFromTree(root);
-	 
-	    writeHeader(root,out); 
-	    in.reset();
-	    writeCompressedBits(in,codings,out);
-	    
-
-	}
-
-	
-	
-	
-	public void writeCompressedBits(BitInputStream in, String[] codings, BitOutputStream out) {
-		// TODO Auto-generated method stub
-		int id=in.readBits(BITS_PER_WORD);
+		int[] counts = readForCounts(in);
+		HuffNode root = makeTreeFromCounts(counts);
+		String[] codings = makeCodingsFromTree(root);
 		
-		while (id!=PSEUDO_EOF){
-			int temp=0;
-			if (id==-1)
+		
+		out.writeBits(BITS_PER_INT, HUFF_TREE );
+		writeHeader(root, out);
+		
+		in.reset();
+		writeCompressedBits(codings, in, out);
+		out.close();
+	}
+	
+	
+	
+	private void writeCompressedBits(String[] codings, BitInputStream in, BitOutputStream out) {
+		while(true){
+			int character = in.readBits(BITS_PER_WORD);
+			if(character == -1)
 				break;
-			for (int i=0;i<codings[id].length();i++){
-				if (codings[id].charAt(i)=='0'){
-					out.writeBits(1, 0);
-				}
-				if (codings[id].charAt(i)=='1')
-					out.writeBits(1, 1);
-			}
-			id=in.readBits(BITS_PER_WORD);
-		
+			String code = codings[character];
+			out.writeBits(code.length(), Integer.parseInt(code, 2));
 		}
-		for (int i=0;i<codings[256].length();i++){
-			if (codings[256].charAt(i)=='0')
-				out.writeBits(1, 0);
-			else
-				out.writeBits(1, 1);
-		}
+		String code = codings[PSEUDO_EOF];
+		out.writeBits(code.length(), Integer.parseInt(code, 2));
 	}
 
-	public void writeHeader(HuffNode root, BitOutputStream out) {
-		// TODO Auto-generated method stub
-		out.writeBits(32, HUFF_TREE);
-		write(root,out);
-		
-	}
-	private void write(HuffNode node, BitOutputStream out){
+
+	private void writeHeader(HuffNode node, BitOutputStream out){
 		if (node.myLeft == null && node.myRight == null){
 			out.writeBits(1, 1);
 			out.writeBits(BITS_PER_WORD+1, node.myValue);
 			return;
-		} else if (node.myValue ==-1) {
+		} 
+		else if (node.myValue ==0) {
 			out.writeBits(1,0);
-			write(node.myLeft,out);
-			write(node.myRight,out);
+			writeHeader(node.myLeft,out);
+			writeHeader(node.myRight,out);
 		}
 	}
 
@@ -129,7 +111,7 @@ public class HuffProcessor {
 			while (PQ.size() > 1){
 				HuffNode left = PQ.remove();
 				HuffNode right = PQ.remove();
-				PQ.add(new HuffNode(-1,left.myWeight+right.myWeight,left,right));
+				PQ.add(new HuffNode(0,left.myWeight+right.myWeight,left,right));
 			}
 			HuffNode root = PQ.remove();
 			return root;
@@ -143,6 +125,7 @@ public class HuffProcessor {
 			b=in.readBits(BITS_PER_WORD);
 		}
 		freq[PSEUDO_EOF] = 1;
+
 		return freq;
 	}
 
