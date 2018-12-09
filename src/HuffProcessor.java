@@ -42,12 +42,12 @@ public class HuffProcessor {
 	 *            Buffered bit stream writing to the output file.
 	 */
 	public void compress(BitInputStream in, BitOutputStream out){
+
 		int[] counts = readForCounts(in);
 		HuffNode root = makeTreeFromCounts(counts);
 		String[] codings = makeCodingsFromTree(root);
 		
-		
-		out.writeBits(BITS_PER_INT, HUFF_TREE );
+		out.writeBits(BITS_PER_INT, HUFF_TREE);
 		writeHeader(root, out);
 		
 		in.reset();
@@ -57,22 +57,23 @@ public class HuffProcessor {
 	
 	
 	
-	private void writeCompressedBits(String[] codings, BitInputStream in, BitOutputStream out) {
+	private void writeCompressedBits(String[] encodings, BitInputStream in, BitOutputStream out) {
 		int bits = 1;
 		while (bits >= 0) { 
 			bits = in.readBits(BITS_PER_WORD);
 			if (bits == -1) {
-				writeStringToBits(codings, out, ALPH_SIZE);
+				writeStringToBits(encodings, out, ALPH_SIZE);
 				return;
 			}
-			writeStringToBits(codings, out, bits);
+			writeStringToBits(encodings, out, bits);
 			
 		}
+		
 	}
-	
 	
 	private void writeStringToBits(String[] encodings, BitOutputStream out, int bits) {
 		String code = encodings[bits];
+		System.out.println(code);
 		for (int i = 0; i < code.length(); i++) {
 			String s = code.substring(i, i+1);
 			int k = Integer.parseInt(s);
@@ -81,63 +82,68 @@ public class HuffProcessor {
 		return;
 	}
 		
-
-	private void writeHeader(HuffNode root, BitOutputStream out){
-		if (root ==null) return;
-		if(root.myValue != -1) {
-			out.writeBits(1, 1);
-			out.writeBits(BITS_PER_WORD+1, root.myValue);
-		}
-		out.writeBits(1, 0);
-		writeHeader(root.myLeft,out);
-		writeHeader(root.myRight,out);
-		return;
-	}
-
-	private String[] makeCodingsFromTree(HuffNode root) {
-		String[] codes = new String[ALPH_SIZE+1];
-		codingHelper(root, "", codes);
-		return codes;
-	}
-
-	private void codingHelper(HuffNode root, String path, String[] codes) {
-		if(root == null) return;
-		if (root.myValue != -1) {
-			codes[root.myValue] = path;
-			return;
-		}
-		codingHelper(root.myLeft,"0",codes);
-		codingHelper(root.myRight,"1",codes);
-		return;
 		
+
+	private void writeHeader(HuffNode root, BitOutputStream out) {
+		if (root.myValue != -1) {
+	    	    out.writeBits(1,  1);
+	    	    out.writeBits(BITS_PER_WORD + 1, root.myValue);
+	    	    return;
+	    }
+
+	    	out.writeBits(1, 0);
+	    writeHeader(root.myLeft, out);
+		writeHeader(root.myRight, out); 
+		return;
+	}
+	private String[] makeCodingsFromTree(HuffNode root) {
+		String[] codings = new String[ALPH_SIZE + 1];
+		codingHelper(root, "", codings);
+		return codings;
 	}
 
-	private HuffNode makeTreeFromCounts(int[] freqs) {
-			PriorityQueue<HuffNode> PQ = new PriorityQueue<>();
-			for (int i = 0; i < freqs.length; i++){
-				if (freqs[i] >0){
-					PQ.add(new HuffNode(i,freqs[i],null,null));
-				}
+	private void codingHelper(HuffNode root, String path, String[] codings) {
+		if (root.myValue != -1) {
+			codings[root.myValue] = path;
+	        return;
+		}
+		
+		codingHelper(root.myLeft, path + "0", codings);
+		codingHelper(root.myRight, path + "1", codings);
+		return;
+	}
+
+	private HuffNode makeTreeFromCounts(int[] freq) {
+		PriorityQueue<HuffNode> pq = new PriorityQueue<>();
+		
+		for (int index = 0; index < freq.length; index++) {
+			if (freq[index] > 0) {
+				pq.add(new HuffNode(index, freq[index], null, null));
 			}
-			while (PQ.size() > 1){
-				HuffNode left = PQ.remove();
-				HuffNode right = PQ.remove();
-				PQ.add(new HuffNode(-1,left.myWeight+right.myWeight,left,right));
-			}
-			HuffNode root = PQ.remove();
-			return root;
+		}
+		pq.add(new HuffNode(PSEUDO_EOF, 1));
+		while (pq.size() > 1) {
+			HuffNode left = pq.remove();
+			HuffNode right = pq.remove();
+			HuffNode t = new HuffNode(-1, left.myWeight + right.myWeight, left, right);
+			pq.add(t);
+		}
+		
+		HuffNode root = pq.remove();
+		return root;
 	}
 
 	private int[] readForCounts(BitInputStream in) {
-		int[] freq = new int[ALPH_SIZE+1];
-		int b = in.readBits(BITS_PER_WORD);
-		while (b!=-1){
-			freq[b]++;
-			b=in.readBits(BITS_PER_WORD);
-		}
+		
+		int[] freq = new int[ALPH_SIZE + 1];
 		freq[PSEUDO_EOF] = 1;
-
+		while (true) {
+			int bits = in.readBits(BITS_PER_WORD);
+			if (bits == -1) break;
+			freq[bits]++;
+		}
 		return freq;
+		
 	}
 
 
