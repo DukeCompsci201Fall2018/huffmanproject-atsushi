@@ -43,8 +43,8 @@ public class HuffProcessor {
 	 */
 	public void compress(BitInputStream in, BitOutputStream out){
 
-		int[] counts = readForCounts(in);
-		HuffNode root = makeTreeFromCounts(counts);
+		int[] freq = readForCounts(in);
+		HuffNode root = makeTreeFromCounts(freq);
 		String[] codings = makeCodingsFromTree(root);
 		
 		out.writeBits(BITS_PER_INT, HUFF_TREE);
@@ -73,7 +73,6 @@ public class HuffProcessor {
 	
 	private void writeStringToBits(String[] encodings, BitOutputStream out, int bits) {
 		String code = encodings[bits];
-		System.out.println(code);
 		for (int i = 0; i < code.length(); i++) {
 			String s = code.substring(i, i+1);
 			int k = Integer.parseInt(s);
@@ -87,17 +86,17 @@ public class HuffProcessor {
 	private void writeHeader(HuffNode root, BitOutputStream out) {
 		if (root.myValue != -1) {
 	    	    out.writeBits(1,  1);
-	    	    out.writeBits(BITS_PER_WORD + 1, root.myValue);
+	    	    out.writeBits(9, root.myValue);
 	    	    return;
 	    }
 
-	    	out.writeBits(1, 0);
+	    out.writeBits(1, 0);
 	    writeHeader(root.myLeft, out);
 		writeHeader(root.myRight, out); 
 		return;
 	}
 	private String[] makeCodingsFromTree(HuffNode root) {
-		String[] codings = new String[ALPH_SIZE + 1];
+		String[] codings = new String[257];
 		codingHelper(root, "", codings);
 		return codings;
 	}
@@ -107,29 +106,28 @@ public class HuffProcessor {
 			codings[root.myValue] = path;
 	        return;
 		}
-		
 		codingHelper(root.myLeft, path + "0", codings);
 		codingHelper(root.myRight, path + "1", codings);
 		return;
 	}
 
 	private HuffNode makeTreeFromCounts(int[] freq) {
-		PriorityQueue<HuffNode> pq = new PriorityQueue<>();
+		PriorityQueue<HuffNode> PQ = new PriorityQueue<>();
 		
 		for (int index = 0; index < freq.length; index++) {
 			if (freq[index] > 0) {
-				pq.add(new HuffNode(index, freq[index], null, null));
+				PQ.add(new HuffNode(index, freq[index], null, null));
 			}
 		}
-		pq.add(new HuffNode(PSEUDO_EOF, 1));
-		while (pq.size() > 1) {
-			HuffNode left = pq.remove();
-			HuffNode right = pq.remove();
+		PQ.add(new HuffNode(PSEUDO_EOF, 1));
+		while (PQ.size() > 1) {
+			HuffNode left = PQ.remove();
+			HuffNode right = PQ.remove();
 			HuffNode t = new HuffNode(-1, left.myWeight + right.myWeight, left, right);
-			pq.add(t);
+			PQ.add(t);
 		}
 		
-		HuffNode root = pq.remove();
+		HuffNode root = PQ.remove();
 		return root;
 	}
 
